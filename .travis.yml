@@ -1,9 +1,11 @@
 language: python
 
 install:
+- pip install ansible[azure]
 - pip install ansible-lint
 
 script:
-- ansible-lint *.yml
+- ansible-lint *.yml --exclude ./vars/
+- ansible-playbook provision_vm_azure.yml
 
 
