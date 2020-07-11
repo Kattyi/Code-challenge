@@ -1,43 +1,50 @@
-- name: Create Azure VM
+- name: Create Azure VMs
   hosts: localhost
   connection: local
   vars_files:
     - ./vars/keys.yml
+  vars:
+    vm_name: myVM
+    virt_network: myVirtualNetwork
+    subnet: mySubnet
+    ip: myPublicIP
+    network_security_group: myNetworkSecurityGroup
+    nic: myNIC
+    resource_group: myResourceGroup
 
   tasks:
   - name: Create resource group
     azure_rm_resourcegroup:
-      name: myResourceGroup
+      name: "{{ resource_group }}"
       location: westeurope
 
   - name: Create virtual network
     azure_rm_virtualnetwork:
-      resource_group: myResourceGroup
-      name: myVnet
+      resource_group: "{{ resource_group }}"
+      name: "{{ virt_network }}"
       address_prefixes: "10.0.0.0/16"
 
   - name: Add subnet
     azure_rm_subnet:
-      resource_group: myResourceGroup
-      name: mySubnet
+      resource_group: "{{ resource_group }}"
+      name: "{{ subnet }}"
       address_prefix: "10.0.1.0/24"
-      virtual_network: myVnet
+      virtual_network: "{{ virt_network }}"
 
-  - name: Create public IP address
+  - name: Create public IP addresses for VMs
     azure_rm_publicipaddress:
-      resource_group: myResourceGroup
+      resource_group: "{{ resource_group }}"
       allocation_method: Static
-      name: myPublicIP
-    register: output_ip_address
-
-  - name: Dump public IP for VM which will be created
-    debug:
-      msg: "The public IP is {{ output_ip_address.state.ip_address }}."
+      name: "{{ ip }}_{{ item }}"
+    loop:
+      - 1
+      - 2
+    register: pip_output
 
   - name: Create Network Security Group that allows SSH
     azure_rm_securitygroup:
-      resource_group: myResourceGroup
-      name: myNetworkSecurityGroup
+      resource_group: "{{ resource_group }}"
+      name: "{{ network_security_group }}"
       rules:
         - name: SSH
           protocol: Tcp
@@ -46,28 +53,40 @@
           priority: 1001
           direction: Inbound
 
-  - name: Create virtual network interface card
+  - name: Create virtual network inteface cards for VMs
     azure_rm_networkinterface:
-      resource_group: myResourceGroup
-      name: myNIC
-      virtual_network: myVnet
-      subnet: mySubnet
-      public_ip_name: myPublicIP
-      security_group: myNetworkSecurityGroup
+      resource_group: "{{ resource_group }}"
+      name: "{{ nic }}_{{ item }}"
+      virtual_network: "{{ virt_network }}"
+      subnet: "{{ subnet }}"
+      public_ip_name: "{{ ip }}_{{ item }}"
+      security_group: "{{ network_security_group }}"
+    loop:
+      - 1
+      - 2
 
-  - name: Create VM
+  - name: Create VMs
     azure_rm_virtualmachine:
-      resource_group: myResourceGroup
-      name: myVM
-      vm_size: Standard_DS1_v2
+      resource_group: "{{ resource_group }}"
+      name: "{{ vm_name }}{{ item }}"
       admin_username: azureuser
       ssh_password_enabled: false
       ssh_public_keys:
         - path: /home/azureuser/.ssh/authorized_keys
           key_data: "{{ ssh_keys }}"
-      network_interfaces: myNIC
+      vm_size: Standard_DS1_v2
+      network_interfaces: "{{ nic }}_{{ item }}"
       image:
         offer: CentOS
         publisher: OpenLogic
         sku: '7.5'
         version: latest
+    loop:
+      - 1
+      - 2
+
+  - debug:
+      msg: "Public IP Address A: {{ pip_output.results[0].state.ip_address }}"
+
+  - debug:
+      msg: "Public IP Address B: {{ pip_output.results[1].state.ip_address }}"
