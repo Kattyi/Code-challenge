@@ -2,15 +2,8 @@
   hosts: localhost
   connection: local
   vars_files:
-    - ./vars/keys.yml
-  vars:
-    vm_name: myVM
-    virt_network: myVirtualNetwork
-    subnet: mySubnet
-    ip: myPublicIP
-    network_security_group: myNetworkSecurityGroup
-    nic: myNIC
-    resource_group: myResourceGroup
+    - ../group_vars/keys.yml
+    - ../group_vars/global.yml
 
   tasks:
   - name: Create resource group
@@ -76,6 +69,7 @@
           key_data: "{{ ssh_keys }}"
       vm_size: Standard_DS1_v2
       network_interfaces: "{{ nic }}_{{ item }}"
+      os_disk_size_gb: 40
       image:
         offer: CentOS
         publisher: OpenLogic
@@ -84,9 +78,11 @@
     loop:
       - 1
       - 2
+    tags: VM
 
   - debug:
-      msg: "Public IP Address A: {{ pip_output.results[0].state.ip_address }}"
+      msg: "Public IP Address 1: {{ pip_output.results[0].state.ip_address }}"
 
   - debug:
-      msg: "Public IP Address B: {{ pip_output.results[1].state.ip_address }}"
+      msg: "Public IP Address 2: {{ pip_output.results[1].state.ip_address }}"
+

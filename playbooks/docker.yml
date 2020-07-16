@@ -1,0 +1,9 @@
+---
+- hosts: all
+  remote_user: azureuser
+  become: true
+  gather_facts: no
+
+  roles:
+    - docker
+

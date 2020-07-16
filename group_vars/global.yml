@@ -1,0 +1,7 @@
+resource_group: myResourceGroup
+vm_name: myVM
+virt_network: myVirtualNetwork
+subnet: mySubnet
+ip: myPublicIP
+network_security_group: myNetworkSecurityGroup
+nic: myNIC

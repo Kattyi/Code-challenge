@@ -1,0 +1,4 @@
+---
+- import_playbook: playbooks/provision_vms_azure.yml
+- import_playbook: playbooks/docker.yml
+
