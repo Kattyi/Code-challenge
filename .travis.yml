@@ -1,5 +1,11 @@
 language: python
 
+before_install:
+- openssl aes-256-cbc -K $encrypted_1d2fe2b4a0ad_key -iv $encrypted_1d2fe2b4a0ad_iv
+  -in id_rsa.enc -out id_rsa -d
+- chmod 600 id_rsa
+- mv id_rsa ~/.ssh/id_rsa
+
 install:
 - pip install ansible[azure]
 - pip install ansible-lint
@@ -7,6 +13,4 @@ install:
 script:
 - ansible-lint *.yml --exclude ./vars/
 - ansible-playbook -i ./azure_rm.yml site.yml
-
-
 
