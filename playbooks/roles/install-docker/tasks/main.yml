@@ -18,13 +18,8 @@
       - docker-ce-cli
       - containerd.io
 
-- name: enable docker service
+- name: ensure docker is enabled and started
   systemd:
     name: docker
     enabled: yes
-
-- name: Configuring remote access with systemd unit file
-  copy:
-    src: files/startup_options.conf
-    dest: /etc/systemd/system/docker.service.d/startup_options.conf
-
+    state: started

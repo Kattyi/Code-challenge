@@ -46,6 +46,15 @@
           priority: 1001
           direction: Inbound
 
+        - name: Docker
+          protocol: Tcp
+          destination_port_range:
+            - 2375
+            - 2376
+          access: Allow
+          priority: 1002
+          direction: Inbound
+
   - name: Create virtual network inteface cards for VMs
     azure_rm_networkinterface:
       resource_group: "{{ resource_group }}"

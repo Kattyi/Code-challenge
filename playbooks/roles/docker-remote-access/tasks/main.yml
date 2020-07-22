@@ -1,0 +1,11 @@
+---
+- name: Configuring remote access with systemd unit file
+  copy:
+    src: files/startup_options.conf
+    dest: /etc/systemd/system/docker.service.d/
+
+- name: restart docker
+  systemd:
+    daemon_reload: yes
+    state: restarted
+    name: docker
