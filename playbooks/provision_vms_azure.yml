@@ -29,6 +29,7 @@
       resource_group: "{{ resource_group }}"
       allocation_method: Static
       name: "{{ ip }}_{{ item }}"
+      domain_name: "katarina-code-challenge-{{ item }}"
     loop:
       - 1
       - 2
@@ -46,13 +47,24 @@
           priority: 1001
           direction: Inbound
 
-        - name: Docker
+        - name: DockerTCP
           protocol: Tcp
           destination_port_range:
-            - 2375
+            - 80
             - 2376
+            - 2377
+            - 7946
           access: Allow
           priority: 1002
+          direction: Inbound
+
+        - name: DockerUDP
+          protocol: Udp
+          destination_port_range:
+            - 4789
+            - 7946
+          access: Allow
+          priority: 1003
           direction: Inbound
 
   - name: Create virtual network inteface cards for VMs
@@ -67,31 +79,48 @@
       - 1
       - 2
 
-  - name: Create VMs
+  - name: Create manager VM
     azure_rm_virtualmachine:
       resource_group: "{{ resource_group }}"
-      name: "{{ vm_name }}{{ item }}"
+      name: "{{ vm_name }}1"
       admin_username: azureuser
       ssh_password_enabled: false
       ssh_public_keys:
         - path: /home/azureuser/.ssh/authorized_keys
           key_data: "{{ ssh_keys }}"
       vm_size: Standard_DS1_v2
-      network_interfaces: "{{ nic }}_{{ item }}"
+      network_interfaces: "{{ nic }}_1"
       os_disk_size_gb: 40
       image:
         offer: CentOS
         publisher: OpenLogic
         sku: '7.5'
         version: latest
-    loop:
-      - 1
-      - 2
-    tags: VM
+      tags:
+        role: manager
+
+  - name: Create worker VM
+    azure_rm_virtualmachine:
+      resource_group: "{{ resource_group }}"
+      name: "{{ vm_name }}2"
+      admin_username: azureuser
+      ssh_password_enabled: false
+      ssh_public_keys:
+        - path: /home/azureuser/.ssh/authorized_keys
+          key_data: "{{ ssh_keys }}"
+      vm_size: Standard_DS1_v2
+      network_interfaces: "{{ nic }}_2"
+      os_disk_size_gb: 40
+      image:
+        offer: CentOS
+        publisher: OpenLogic
+        sku: '7.5'
+        version: latest
+      tags:
+        role: worker
 
   - debug:
       msg: "Public IP Address 1: {{ pip_output.results[0].state.ip_address }}"
 
   - debug:
       msg: "Public IP Address 2: {{ pip_output.results[1].state.ip_address }}"
-
