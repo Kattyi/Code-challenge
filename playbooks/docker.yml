@@ -6,5 +6,12 @@
 
   roles:
     - install-docker
-    - docker-remote-access
 
+- hosts: tag_role_manager
+  remote_user: azureuser
+  become: true
+  gather_facts: no
+
+  roles:
+    - generate-certificates
+    - docker-remote-access

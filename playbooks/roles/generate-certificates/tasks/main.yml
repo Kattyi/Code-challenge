@@ -1,0 +1,99 @@
+---
+- name: Generate CA private keys
+  command: openssl genrsa -aes256 -out /etc/pki/CA/private/docker-ca-key.pem -passout pass:$LS_COLORS 4096
+  args:
+    creates: /etc/pki/CA/private/docker-ca-key.pem
+
+- name: Generate CA public keys
+  command: openssl req -new -x509 -days 365 \
+                            -key /etc/pki/CA/private/docker-ca-key.pem -sha256 \
+                            -out /etc/pki/CA/certs/docker-ca.pem \
+                            -passin pass:$LS_COLORS \
+                            -subj "/C=SK/ST=Bratislavsky kraj/L=Bratislava/"
+  args:
+    creates: /etc/pki/CA/certs/docker-ca.pem
+
+- name: Generate RSA private key
+  command: openssl genrsa -out /etc/pki/tls/private/docker-server-key.pem 4096
+  args:
+    creates: /etc/pki/tls/private/docker-server-key.pem
+
+- name: Generate certificate signing request
+  command: openssl req -subj "/CN=katarina-code-challenge-1.westeurope.cloudapp.azure.com" \
+                       -sha256 -new -key /etc/pki/tls/private/docker-server-key.pem \
+                       -out server.csr
+  args:
+    creates: server.csr
+
+- name: Generate extfile.cnf
+  blockinfile:
+    path: ./extfile.cnf
+    create: yes
+    block: |
+      subjectAltName = DNS:katarina-code-challenge-1.westeurope.cloudapp.azure.com,IP:127.0.0.1
+      extendedKeyUsage = serverAuth
+
+- name: Generate the signed certificate
+  command: openssl x509 -req -days 365 -sha256 -in server.csr \
+                        -CA /etc/pki/CA/certs/docker-ca.pem \
+                        -CAkey /etc/pki/CA/private/docker-ca-key.pem \
+                        -CAcreateserial -out /etc/pki/tls/certs/docker-server-cert.pem \
+                        -extfile extfile.cnf \
+                        -passin pass:$LS_COLORS
+  args:
+    creates: /etc/pki/tls/certs/docker-server-cert.pem
+
+- name: Generate client key
+  command: openssl genrsa -out key.pem 4096
+  args:
+    creates: key.pem
+
+- name: Generate client certificate signing request
+  command: openssl req -subj '/CN=client' -new -key key.pem -out client.csr
+  args:
+    creates: client.csr
+
+- name: Generate extfile-client.cnf
+  blockinfile:
+    path: ./extfile-client.cnf
+    create: yes
+    block: |
+      extendedKeyUsage = clientAuth
+
+- name: Generate client signed certificate
+  command: openssl x509 -req -days 365 -sha256 -in client.csr \
+                        -CA /etc/pki/CA/certs/docker-ca.pem \
+                        -CAkey /etc/pki/CA/private/docker-ca-key.pem \
+                        -CAcreateserial -out cert.pem \
+                        -extfile extfile-client.cnf \
+                        -passin pass:$LS_COLORS
+  args:
+    creates: cert.pem
+
+- name: Remove files
+  file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - client.csr
+    - server.csr
+    - extfile.cnf
+    - extfile-client.cnf
+
+- name: Change file permissions
+  file:
+    path: "{{ item }}"
+    mode: '0400'
+  with_items:
+    - /etc/pki/CA/private/docker-ca-key.pem
+    - key.pem
+    - /etc/pki/tls/private/docker-server-key.pem
+
+- name: Change file permissions
+  file:
+    path: "{{ item }}"
+    mode: '0444'
+  with_items:
+    - /etc/pki/CA/certs/docker-ca.pem
+    - /etc/pki/tls/certs/docker-server-cert.pem
+    - cert.pem
